@@ -19,7 +19,7 @@ load_dotenv()
 
 PORT = int(os.getenv("PORT", 5050))
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
-MODEL_NAME = os.getenv("LLM_MODEL", "gemma3:27b")
+MODEL_NAME = os.getenv("LLM_MODEL", "gemma2:27b")
 def tnr(): return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
 
@@ -34,7 +34,7 @@ async def index():
 @app.api_route("/incoming-call", methods=["GET", "POST"])
 async def handle_incoming_call(request: Request):
     # Use RunPod proxy URL for WebSocket connection
-    host = "nwg343q6btw0c8-5050.proxy.runpod.net"
+    host = "cgfhddmwur7njv-5050.proxy.runpod.net"
     response = f"""
     <Response>
         <Connect>
