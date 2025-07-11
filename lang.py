@@ -15,7 +15,7 @@ prompt_template = ChatPromptTemplate.from_messages([
 ])
 
 # Initialize LLM
-llm = OllamaLLM(model='gemma3:27b', base_url="http://localhost:11434")
+llm = OllamaLLM(model='gemma2:27b', base_url="http://localhost:11434")
 
 # Create the chain with modern LCEL syntax
 chain = prompt_template | llm
@@ -23,11 +23,13 @@ chain = prompt_template | llm
 # Chat history storage
 chat_sessions = {}
 
+
 def get_session_history(session_id: str) -> InMemoryChatMessageHistory:
     """Get or create chat history for a session."""
     if session_id not in chat_sessions:
         chat_sessions[session_id] = InMemoryChatMessageHistory()
     return chat_sessions[session_id]
+
 
 # Create the runnable with message history
 chain_with_history = RunnableWithMessageHistory(
@@ -36,6 +38,7 @@ chain_with_history = RunnableWithMessageHistory(
     input_messages_key="input",
     history_messages_key="history",
 )
+
 
 def get_llm_response(text: str, session_id: str = "default_session") -> str:
 
