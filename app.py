@@ -7,7 +7,7 @@ import time
 from fastapi import FastAPI, WebSocket, Request
 from fastapi.responses import HTMLResponse
 from fastapi.websockets import WebSocketDisconnect
-from stt import new_stream
+from stt import new_stream, load_whisper_model
 from tts import stream as tts_stream
 from ollama import Client as OllamaClient
 from dotenv import load_dotenv
@@ -24,6 +24,11 @@ def tnr(): return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
 
 app = FastAPI()
+
+# Pre-load Whisper model at startup to prevent delays
+print("[⚡] Pre-loading Whisper model at startup...")
+load_whisper_model()
+print("[⚡] Voice agent ready!")
 
 
 @app.get("/")

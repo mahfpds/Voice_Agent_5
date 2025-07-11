@@ -3,16 +3,30 @@ import numpy as np
 import asyncio
 import torch
 
+# Global model variable - load once at startup
+_whisper_model = None
+
+
+def load_whisper_model():
+    """Load Whisper model once at startup"""
+    global _whisper_model
+    if _whisper_model is None:
+        try:
+            print("[INFO] Loading Whisper model at startup...")
+            _whisper_model = whisper.load_model("large-v3").cuda()
+            print("[INFO] ✅ Whisper model loaded successfully on GPU")
+        except Exception as e:
+            print(f"[WARNING] CUDA failed: {e}, falling back to CPU")
+            _whisper_model = whisper.load_model("large-v3")
+            print("[INFO] ✅ Whisper model loaded successfully on CPU")
+    return _whisper_model
+
 
 class WhisperStream:
     def __init__(self, sample_rate=16000, chunk_duration=2):
-        try:
-            # Use OpenAI Whisper with GPU (better cuDNN compatibility)
-            self.model = whisper.load_model("large-v3").cuda()
-            print("[INFO] Using CUDA GPU for OpenAI Whisper")
-        except Exception as e:
-            print(f"[WARNING] CUDA failed: {e}, falling back to CPU")
-            self.model = whisper.load_model("large-v3")
+        # Use the pre-loaded global model
+        self.model = load_whisper_model()
+        print("[INFO] Using pre-loaded Whisper model for new stream")
 
         self.sample_rate = sample_rate
         self.frames_per_chunk = int(sample_rate * chunk_duration)
