@@ -54,19 +54,33 @@ class WhisperStream:
             else:
                 audio_np = audio_np[:self.frames_per_chunk]
 
-            # Use OpenAI Whisper transcription
+            # Use OpenAI Whisper transcription with better thresholds
             result = self.model.transcribe(
                 audio_np,
                 language="en",
                 verbose=False,
-                no_speech_threshold=0.6,
-                logprob_threshold=-1.0
+                no_speech_threshold=0.8,  # Higher threshold to reduce false positives
+                logprob_threshold=-0.5,   # More strict probability threshold
+                condition_on_previous_text=False,  # Don't use context from previous text
+                compression_ratio_threshold=2.4,   # Detect repetitive/nonsense audio
+                temperature=0.0  # Use most confident predictions only
             )
 
             if result.get("segments"):
                 for segment in result["segments"]:
+                    # Additional filtering - only accept segments with reasonable content
+                    text = segment['text'].strip()
+
+                    # Skip very short segments (likely noise)
+                    if len(text) < 3:
+                        continue
+
+                    # Skip segments that are just punctuation or single letters
+                    if text.replace(' ', '').replace('.', '').replace(',', '').replace('!', '').replace('?', '') == '':
+                        continue
+
                     print(
-                        f"[🧠 STT] {segment['start']:.2f}s - {segment['end']:.2f}s: {segment['text']}")
+                        f"[🧠 STT] {segment['start']:.2f}s - {segment['end']:.2f}s: {text}")
                     # Create a segment-like object for compatibility
 
                     class Segment:
@@ -75,7 +89,7 @@ class WhisperStream:
                             self.end = end
                             self.text = text
 
-                    yield Segment(segment['start'], segment['end'], segment['text'])
+                    yield Segment(segment['start'], segment['end'], text)
 
 
 def new_stream():
