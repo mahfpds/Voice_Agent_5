@@ -5,14 +5,12 @@ import asyncio
 
 class WhisperStream:
     def __init__(self, sample_rate=16000, chunk_duration=2):
-        try:
-            self.model = WhisperModel(
-                "large-v3", device="cuda", compute_type="float16")
-            print("[INFO] Using CUDA GPU for Whisper")
-        except Exception as e:
-            print(f"[WARNING] CUDA failed: {e}, falling back to CPU")
-            self.model = WhisperModel(
-                "large-v3", device="cpu", compute_type="int8")
+        # Use CPU for Whisper to avoid cuDNN compatibility issues
+        # GPU is reserved for Ollama which is more critical for response generation
+        print("[INFO] Using CPU for Whisper (avoiding cuDNN issues)")
+        self.model = WhisperModel(
+            "large-v3", device="cpu", compute_type="int8")
+
         self.sample_rate = sample_rate
         self.frames_per_chunk = int(sample_rate * chunk_duration)
         self.buffer = bytearray()
