@@ -69,12 +69,14 @@ async def media_stream(websocket: WebSocket):
                 if data['event'] == 'media':
                     ulaw = base64.b64decode(data['media']['payload'])
                     pcm = audioop.ulaw2lin(ulaw, 2)  # 8-bit μ-law → 16-bit PCM
+                    print(f"[DEBUG] Received {len(pcm)} bytes of PCM audio")
                     buffer.extend(pcm)
 
-                    while len(buffer) >= bytes_per_sec * chunk_duration_sec:
-                        chunk = buffer[:bytes_per_sec * chunk_duration_sec]
-                        buffer[:] = buffer[bytes_per_sec * chunk_duration_sec:]
-                        stream_stt.feed_audio(chunk)
+                                            while len(buffer) >= bytes_per_sec * chunk_duration_sec:
+                            chunk = buffer[:bytes_per_sec * chunk_duration_sec]
+                            buffer[:] = buffer[bytes_per_sec * chunk_duration_sec:]
+                            print(f"[DEBUG] Feeding {len(chunk)} bytes to Whisper")
+                            stream_stt.feed_audio(chunk)
 
                 elif data['event'] == 'start':
                     stream_sid = data['start']['streamSid']
