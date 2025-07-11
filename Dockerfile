@@ -1,5 +1,5 @@
-# Use CUDA-enabled Python base image
-FROM nvidia/cuda:11.8-devel-ubuntu22.04
+# Use standard Ubuntu base image (CUDA will be available from RunPod host)
+FROM ubuntu:22.04
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
@@ -27,9 +27,6 @@ COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip3 install --no-cache-dir -r requirements.txt
-
-# Install PyTorch with CUDA support (matching CUDA 11.8)
-RUN pip3 install torch==2.1.0+cu118 torchaudio==2.1.0+cu118 --index-url https://download.pytorch.org/whl/cu118
 
 # Copy application code
 COPY . .
