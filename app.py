@@ -36,10 +36,8 @@ async def handle_incoming_call(request: Request):
     host = request.url.hostname
     response = f"""
     <Response>
-        <Say>Hello, you've reached the AI voice assistant. Please wait while I connect you.</Say>
-        <Connect>
-            <Stream url="wss://{host}/media-stream" />
-        </Connect>
+        <Say>Hello! This is your AI assistant. The call answering is working correctly. Goodbye!</Say>
+        <Hangup/>
     </Response>
     """
     return HTMLResponse(content=response, media_type="application/xml")
