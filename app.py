@@ -12,7 +12,7 @@ from tts import stream as tts_stream
 from ollama import Client as OllamaClient
 from dotenv import load_dotenv
 import wave
-from lang import get_llm_response
+from lang import get_llm_response, load_ollama_model
 
 
 load_dotenv()
@@ -25,10 +25,18 @@ def tnr(): return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
 app = FastAPI()
 
-# Pre-load Whisper model at startup to prevent delays
-print("[⚡] Pre-loading Whisper model at startup...")
+# Pre-load both models at startup to prevent delays
+print("[⚡] Initializing AI models at startup...")
+print("[⚡] Pre-loading Whisper model...")
 load_whisper_model()
-print("[⚡] Voice agent ready!")
+print("[⚡] Pre-loading Ollama model...")
+try:
+    load_ollama_model()
+    print("[⚡] ✅ All models loaded successfully!")
+    print("[⚡] 🚀 Voice agent ready for instant conversations!")
+except ConnectionError as e:
+    print(f"[⚡] ❌ Failed to load Ollama: {e}")
+    print("[⚡] ⚠️  Please ensure Ollama is running: ollama serve &")
 
 
 @app.get("/")
