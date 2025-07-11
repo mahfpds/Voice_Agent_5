@@ -20,17 +20,21 @@ load_dotenv()
 PORT = int(os.getenv("PORT", 5050))
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 MODEL_NAME = os.getenv("LLM_MODEL", "gemma3:27b")
-tnr = lambda : time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+def tnr(): return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+
 
 app = FastAPI()
+
 
 @app.get("/")
 async def index():
     return {"message": "Custom Twilio Voice Bot is running!"}
 
+
 @app.api_route("/incoming-call", methods=["GET", "POST"])
 async def handle_incoming_call(request: Request):
-    host = request.url.hostname
+    # Use RunPod proxy URL for WebSocket connection
+    host = "svvjq28q83q9iw-5050.proxy.runpod.net"
     response = f"""
     <Response>
         <Connect>
@@ -39,6 +43,7 @@ async def handle_incoming_call(request: Request):
     </Response>
     """
     return HTMLResponse(content=response, media_type="application/xml")
+
 
 @app.websocket("/media-stream")
 async def media_stream(websocket: WebSocket):
@@ -77,7 +82,7 @@ async def media_stream(websocket: WebSocket):
                     print(f"[🔄] Started stream: {stream_sid}")
                     print(f"[🔄] Call ID: {stream_cid}")
                     await send_file(websocket, stream_sid, 'intro.wav')
-                
+
         except WebSocketDisconnect:
             print("[❌] WebSocket disconnected")
 
@@ -120,11 +125,12 @@ async def send_tts(text: str, websocket: WebSocket, stream_sid: str = None):
 
     os.remove(f_name)
 
+
 async def send_file(websocket: WebSocket, stream_sid: str, f_name: str):
- 
-    with wave.open(f_name, "rb") as wav:  
-        raw_wav = wav.readframes(wav.getnframes())   
-        raw_ulaw = audioop.lin2ulaw(raw_wav,wav.getsampwidth())
+
+    with wave.open(f_name, "rb") as wav:
+        raw_wav = wav.readframes(wav.getnframes())
+        raw_ulaw = audioop.lin2ulaw(raw_wav, wav.getsampwidth())
         encoded_audio = base64.b64encode(raw_ulaw).decode("utf-8")
 
     await websocket.send_json({
