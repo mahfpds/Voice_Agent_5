@@ -33,13 +33,11 @@ async def index():
 
 @app.api_route("/incoming-call", methods=["GET", "POST"])
 async def handle_incoming_call(request: Request):
-    host = request.url.hostname
-    response = f"""
-    <Response>
-        <Say>Hello! This is your AI assistant. The call answering is working correctly. Goodbye!</Say>
-        <Hangup/>
-    </Response>
-    """
+    response = """<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say>Hello! This is working!</Say>
+    <Hangup/>
+</Response>"""
     return HTMLResponse(content=response, media_type="application/xml")
 
 
