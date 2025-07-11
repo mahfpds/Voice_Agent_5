@@ -34,7 +34,7 @@ async def index():
 @app.api_route("/incoming-call", methods=["GET", "POST"])
 async def handle_incoming_call(request: Request):
     # Use RunPod proxy URL for WebSocket connection
-    host = "svvjq28q83q9iw-5050.proxy.runpod.net"
+    host = "nwg343q6btw0c8-5050.proxy.runpod.net"
     response = f"""
     <Response>
         <Connect>
