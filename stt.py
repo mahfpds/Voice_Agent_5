@@ -6,7 +6,7 @@ import asyncio
 class WhisperStream:
     def __init__(self, sample_rate=16000, chunk_duration=2):
         self.model = WhisperModel(
-            "large-v3", device="cuda", compute_type="float16")
+            "large-v3", device="cpu", compute_type="int8")
         self.sample_rate = sample_rate
         self.frames_per_chunk = int(sample_rate * chunk_duration)
         self.buffer = bytearray()
