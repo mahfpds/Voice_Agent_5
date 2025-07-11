@@ -1,18 +1,18 @@
-from faster_whisper import WhisperModel
+import whisper
 import numpy as np
 import asyncio
+import torch
 
 
 class WhisperStream:
     def __init__(self, sample_rate=16000, chunk_duration=2):
         try:
-            self.model = WhisperModel(
-                "large-v3", device="cuda", compute_type="float16")
-            print("[INFO] Using CUDA GPU for Whisper")
+            # Use OpenAI Whisper with GPU (better cuDNN compatibility)
+            self.model = whisper.load_model("large-v3").cuda()
+            print("[INFO] Using CUDA GPU for OpenAI Whisper")
         except Exception as e:
             print(f"[WARNING] CUDA failed: {e}, falling back to CPU")
-            self.model = WhisperModel(
-                "large-v3", device="cpu", compute_type="int8")
+            self.model = whisper.load_model("large-v3")
 
         self.sample_rate = sample_rate
         self.frames_per_chunk = int(sample_rate * chunk_duration)
@@ -40,11 +40,28 @@ class WhisperStream:
             else:
                 audio_np = audio_np[:self.frames_per_chunk]
 
-            segments, _ = self.model.transcribe(
-                audio_np, language="en", beam_size=1, vad_filter=True, vad_parameters=dict(min_silence_duration_ms=500))
-            for seg in segments:
-                print(f"[🧠 STT] {seg.start:.2f}s - {seg.end:.2f}s: {seg.text}")
-                yield seg
+            # Use OpenAI Whisper transcription
+            result = self.model.transcribe(
+                audio_np,
+                language="en",
+                verbose=False,
+                no_speech_threshold=0.6,
+                logprob_threshold=-1.0
+            )
+
+            if result.get("segments"):
+                for segment in result["segments"]:
+                    print(
+                        f"[🧠 STT] {segment['start']:.2f}s - {segment['end']:.2f}s: {segment['text']}")
+                    # Create a segment-like object for compatibility
+
+                    class Segment:
+                        def __init__(self, start, end, text):
+                            self.start = start
+                            self.end = end
+                            self.text = text
+
+                    yield Segment(segment['start'], segment['end'], segment['text'])
 
 
 def new_stream():
