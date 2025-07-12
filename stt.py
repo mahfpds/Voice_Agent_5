@@ -6,6 +6,14 @@ import torch
 # Global model variable - load once at startup
 _whisper_model = None
 
+# Common hallucination phrases to filter out
+HALLUCINATION_PHRASES = {
+    "thank you", "thanks", "thank you.", "thanks.", "thank you very much",
+    "you're welcome", "welcome", "hello", "hi", "goodbye", "bye",
+    "okay", "ok", "alright", "right", "yes", "yeah", "no", "nope",
+    "mm-hmm", "uh-huh", "mm", "uh", "um", "oh", "ah", "hmm"
+}
+
 
 def load_whisper_model():
     """Load Whisper model once at startup"""
@@ -20,6 +28,31 @@ def load_whisper_model():
             _whisper_model = whisper.load_model("large-v3")
             print("[INFO] ✅ Whisper model loaded successfully on CPU")
     return _whisper_model
+
+
+def has_sufficient_energy(audio_np, threshold=0.01):
+    """Check if audio has sufficient energy to contain speech"""
+    rms = np.sqrt(np.mean(audio_np ** 2))
+    return rms > threshold
+
+
+def is_likely_hallucination(text):
+    """Check if text is likely a hallucination"""
+    text_lower = text.lower().strip()
+
+    # Remove common punctuation
+    cleaned = text_lower.replace('.', '').replace(
+        ',', '').replace('!', '').replace('?', '').strip()
+
+    # Check against known hallucination phrases
+    if cleaned in HALLUCINATION_PHRASES:
+        return True
+
+    # Check if it's just repeated characters or very short
+    if len(cleaned) < 4:
+        return True
+
+    return False
 
 
 class WhisperStream:
@@ -54,16 +87,22 @@ class WhisperStream:
             else:
                 audio_np = audio_np[:self.frames_per_chunk]
 
-            # Use OpenAI Whisper transcription with better thresholds
+            # First check: Does the audio have sufficient energy?
+            if not has_sufficient_energy(audio_np, threshold=0.015):
+                print("[🔇 STT] Skipping low-energy audio (likely silence)")
+                continue
+
+            # Use OpenAI Whisper transcription with very aggressive thresholds
             result = self.model.transcribe(
                 audio_np,
                 language="en",
                 verbose=False,
-                no_speech_threshold=0.8,  # Higher threshold to reduce false positives
-                logprob_threshold=-0.5,   # More strict probability threshold
+                no_speech_threshold=0.9,   # Much higher - almost certain speech needed
+                logprob_threshold=-0.3,    # Much stricter probability threshold
                 condition_on_previous_text=False,  # Don't use context from previous text
-                compression_ratio_threshold=2.4,   # Detect repetitive/nonsense audio
-                temperature=0.0  # Use most confident predictions only
+                compression_ratio_threshold=2.0,   # Detect repetitive/nonsense audio
+                temperature=0.0,  # Use most confident predictions only
+                initial_prompt=""  # No initial prompt to bias transcription
             )
 
             if result.get("segments"):
@@ -72,11 +111,26 @@ class WhisperStream:
                     text = segment['text'].strip()
 
                     # Skip very short segments (likely noise)
-                    if len(text) < 3:
+                    if len(text) < 5:
+                        print(f"[❌ STT] Skipping too short: '{text}'")
                         continue
 
-                    # Skip segments that are just punctuation or single letters
-                    if text.replace(' ', '').replace('.', '').replace(',', '').replace('!', '').replace('?', '') == '':
+                    # Skip likely hallucinations
+                    if is_likely_hallucination(text):
+                        print(f"[❌ STT] Filtering hallucination: '{text}'")
+                        continue
+
+                    # Check minimum duration (avoid super quick "words")
+                    duration = segment['end'] - segment['start']
+                    if duration < 0.5:  # Less than half a second
+                        print(
+                            f"[❌ STT] Skipping too fast: '{text}' ({duration:.2f}s)")
+                        continue
+
+                    # Check average log probability for this segment
+                    if 'avg_logprob' in segment and segment['avg_logprob'] < -0.4:
+                        print(
+                            f"[❌ STT] Low confidence: '{text}' (logprob: {segment['avg_logprob']:.3f})")
                         continue
 
                     print(
